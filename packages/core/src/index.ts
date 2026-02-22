@@ -37,9 +37,37 @@ export {
   type ExportedAsset,
 } from './parser/asset-exporter.js';
 
-// TODO: Phase 3~4에서 추가
-// export * from './adapters/tailwind.js';
-// export * from './adapters/css-modules.js';
-// export * from './adapters/styled-components.js';
+// ── Phase 3: Style Adapters & Theme ────────────────────────────────────────
+export { TailwindAdapter } from './adapters/tailwind.js';
+export { CssModulesAdapter } from './adapters/css-modules.js';
+export {
+  StyledComponentsAdapter,
+  ThemedStyledComponentsAdapter,
+} from './adapters/styled-components.js';
+export {
+  findColorToken,
+  irColorToHex,
+  irColorToRgba,
+  backgroundToCss,
+  shadowToCss,
+  borderRadiusToCss,
+  sizeToCss,
+  findSpacingToken,
+} from './adapters/token-mapper.js';
+export {
+  extractTokensFromVariables,
+  mergeTokens,
+  DEFAULT_TOKENS,
+} from './theme/extractor.js';
+export {
+  generateThemeFile,
+  generateCssVariablesFile,
+  generateTokenTypes,
+} from './theme/generator.js';
+export {
+  generateTailwindConfig,
+  generateTailwindExtend,
+} from './theme/tailwind-config.js';
+
+// TODO: Phase 4에서 추가
 // export * from './generator/component.js';
-// export * from './theme/extractor.js';
