@@ -102,3 +102,27 @@ export {
   type GeneratedFile,
   type GeneratedComponent,
 } from './generator/component.js';
+
+// ── Phase 5: 고급 기능 ────────────────────────────────────────────────────
+export {
+  EmotionStyledAdapter,
+  EmotionCssAdapter,
+  ThemedEmotionStyledAdapter,
+} from './adapters/emotion.js';
+export {
+  generateStories,
+  generateAllStories,
+  type StoriesOptions,
+  type GeneratedStories,
+} from './generator/stories.js';
+export {
+  extractUserBlocks,
+  mergeUserBlocks,
+  wrapUserBlock,
+  isContentEqual,
+  resolveUpdateStrategy,
+  USER_BLOCK_START,
+  USER_BLOCK_END,
+  type UserBlock,
+  type DiffResult,
+} from './utils/diff.js';
