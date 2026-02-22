@@ -1,0 +1,12 @@
+{
+  "name": "@figma-to-react/plugin",
+  "version": "0.1.0",
+  "description": "Figma 플러그인 (Plugin API 기반)",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@figma-to-react/core": "workspace:*"
+  }
+}

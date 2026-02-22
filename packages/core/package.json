@@ -1,0 +1,11 @@
+{
+  "name": "@figma-to-react/core",
+  "version": "0.1.0",
+  "description": "IR 타입, Style Adapters, Code Generator",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  }
+}

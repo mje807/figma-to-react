@@ -1,0 +1,11 @@
+{
+  "name": "Figma to React",
+  "id": "figma-to-react",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "networkAccess": {
+    "allowedDomains": ["http://localhost:3131"],
+    "reasoning": "로컬 변환 서버와 통신 (파일 생성 담당)"
+  }
+}

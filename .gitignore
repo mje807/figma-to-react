@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build
+dist/
+build/
+*.js.map
+
+# env
+.env
+.env.local
+figma2react.config.yml   # 실제 설정 (토큰 포함) — example만 커밋
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Figma plugin build
+packages/plugin/dist/

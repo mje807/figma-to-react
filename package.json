@@ -1,0 +1,15 @@
+{
+  "name": "figma-to-react",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Figma 디자인 → React 컴포넌트 자동 변환",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

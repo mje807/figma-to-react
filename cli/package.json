@@ -1,0 +1,17 @@
+{
+  "name": "figma-to-react",
+  "version": "0.1.0",
+  "description": "Figma → React CLI (REST API 자동화)",
+  "bin": {
+    "figma-to-react": "dist/index.js",
+    "f2r": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "@figma-to-react/core": "workspace:*",
+    "@figma-to-react/server": "workspace:*"
+  }
+}
