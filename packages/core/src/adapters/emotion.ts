@@ -64,8 +64,8 @@ function buildCssBody(node: IRNode, tokens?: DesignTokens): string {
   }
 
   // ── Size ──
-  const widthCss = sizeToCss(layout.width);
-  const heightCss = sizeToCss(layout.height);
+  const widthCss = sizeToCss(layout.width, 'width');
+  const heightCss = sizeToCss(layout.height, 'height');
   if (widthCss) lines.push(`  width: ${widthCss};`);
   if (heightCss) lines.push(`  height: ${heightCss};`);
   if (layout.minWidth !== undefined) lines.push(`  min-width: ${layout.minWidth}px;`);
@@ -137,10 +137,10 @@ function buildCssBody(node: IRNode, tokens?: DesignTokens): string {
  */
 export class EmotionStyledAdapter implements StyleAdapter {
   readonly name: string = 'emotion-styled';
-  private tokens?: DesignTokens;
+  private readonly tokens: DesignTokens | undefined;
 
   constructor(tokens?: DesignTokens) {
-    this.tokens = tokens;
+    this.tokens = tokens ?? undefined;
   }
 
   generateStyle(node: IRNode): StyleOutput {
@@ -188,12 +188,12 @@ export class EmotionStyledAdapter implements StyleAdapter {
  */
 export class EmotionCssAdapter implements StyleAdapter {
   readonly name: string = 'emotion-css';
-  private tokens?: DesignTokens;
+  private readonly tokens: DesignTokens | undefined;
   /** 수집된 css 변수 정의 (노드 이름 → css 템플릿 리터럴) */
   private cssVars: Map<string, string> = new Map();
 
   constructor(tokens?: DesignTokens) {
-    this.tokens = tokens;
+    this.tokens = tokens ?? undefined;
   }
 
   generateStyle(node: IRNode): StyleOutput {
