@@ -1246,3 +1246,514 @@ FigmaToCode (github.com/bernaferrari/FigmaToCode) 포크 가능:
 - [ ] Figma Variables 사용 중인지 확인 (Pro 플랜 필요)
 - [ ] 팀 스타일 어댑터 우선순위 결정 (Tailwind 먼저?)
 - [ ] 노드 네이밍 컨벤션 디자이너와 합의
+
+---
+
+## ⚠️ 설계 보완 사항 (2026-02-22 점검)
+
+---
+
+### [보완 1] 프로젝트 구조 통합 — 최종 버전
+
+문서 내 구조가 2곳(초기 `src/` 단일 패키지 vs 후반 `packages/` monorepo)에 충돌.  
+**아래가 최종 확정 구조.**
+
+```
+figma-to-react/                  (monorepo root)
+├── packages/
+│   ├── core/                    # IR 타입, Style Adapters, Generator (공유)
+│   │   └── src/
+│   │       ├── ir/types.ts      ✅ 구현됨
+│   │       ├── adapters/base.ts ✅ 구현됨
+│   │       ├── adapters/tailwind.ts
+│   │       ├── adapters/css-modules.ts
+│   │       ├── adapters/styled-components.ts
+│   │       ├── adapters/emotion.ts
+│   │       ├── adapters/token-mapper.ts
+│   │       ├── generator/component.ts
+│   │       ├── generator/types.ts
+│   │       ├── generator/stories.ts
+│   │       ├── generator/index-barrel.ts
+│   │       ├── generator/formatter.ts
+│   │       ├── parser/figma-client.ts  (REST API용)
+│   │       ├── parser/node-parser.ts
+│   │       ├── parser/layout-parser.ts
+│   │       ├── parser/style-parser.ts
+│   │       ├── parser/component-parser.ts
+│   │       ├── parser/asset-exporter.ts
+│   │       ├── theme/extractor.ts
+│   │       ├── theme/generator.ts
+│   │       └── utils/naming.ts
+│   │
+│   ├── plugin/                  # Figma 플러그인 (Plugin API)
+│   │   ├── src/
+│   │   │   ├── code.ts          ✅ skeleton
+│   │   │   ├── ui.tsx           # 플러그인 패널 UI
+│   │   │   └── extractor.ts     # getCSSAsync() 기반 IR 추출
+│   │   └── manifest.json        ✅ 구현됨
+│   │
+│   ├── server/                  # 로컬 변환 서버 (포트 3131)
+│   │   └── src/
+│   │       ├── index.ts         ✅ skeleton
+│   │       ├── routes.ts        # /convert /preview /health /diff
+│   │       ├── job-queue.ts     # 비동기 작업 큐
+│   │       └── file-writer.ts   # 실제 파일 생성
+│   │
+│   └── n8n-nodes/               # n8n 커스텀 노드
+│       ├── nodes/FigmaToReact/
+│       │   ├── FigmaToReact.node.ts      ✅ skeleton
+│       │   └── FigmaToReactTrigger.node.ts ✅ skeleton
+│       └── credentials/
+│           └── FigmaToReactApi.credentials.ts ✅ skeleton
+│
+├── cli/                         # REST API 기반 CLI (f2r 명령어)
+│   └── src/index.ts
+│
+├── workflows/                   # n8n 워크플로우 JSON 템플릿
+│   └── 01-handoff-auto-pr.json  ✅ 구현됨
+│
+├── fixtures/                    # 테스트용 Figma JSON 스냅샷 (Phase 1에 추가)
+│   ├── button-component.json
+│   ├── card-component.json
+│   └── token-set.json
+│
+├── package.json                 ✅ workspace root
+└── pnpm-workspace.yaml          ✅ 구현됨
+```
+
+---
+
+### [보완 2] 최종 Phase 목록 (통합)
+
+기존 3곳에 분산된 Phase를 아래로 통합. 이전 Phase 목록은 무시.
+
+| Phase | 내용 | 예상 기간 |
+|-------|------|---------|
+| **1** | 기반 인프라 (TypeScript/Vitest/ESLint 세팅, Figma API 클라이언트, 설정 로더) | 1~2일 |
+| **2** | Figma Parser (노드 트리 순회, Auto Layout, 스타일, Component/Variant) | 2~3일 |
+| **3** | Style Adapters (Tailwind 우선, CSS Modules, SC, 토큰 추출) | 2일 |
+| **4** | Code Generator (JSX 재귀 생성, TypeScript 인터페이스, Prettier) | 2일 |
+| **5** | 로컬 서버 (Express, /convert /preview /diff, job-queue, n8n 친화적 API) | 1~2일 |
+| **6** | Figma 플러그인 (getCSSAsync() extractor, 패널 UI, 서버 연결) | 2~3일 |
+| **7** | CLI (f2r convert/tokens/watch/diff, REST API 기반) | 1일 |
+| **8** | n8n 노드 패키지 (Convert 노드, Trigger 노드, Credentials) | 2일 |
+| **9** | 고급 기능 (반복 패턴, Storybook, Watch 모드, Emotion 어댑터) | 2일 |
+| **10** | 테스트 & 실전 검증 (fixtures 기반 테스트, 실제 팀 파일 적용) | 2일 |
+
+---
+
+### [보완 3] 코드 재생성 전략 (Code Regeneration)
+
+**문제:** 개발자가 생성된 컴포넌트를 수정한 뒤 Figma가 다시 바뀌면?
+
+3가지 전략을 config에서 선택:
+
+```yaml
+# figma2react.config.yml
+output:
+  onConflict: "overwrite"   # overwrite | merge | skip | interactive
+```
+
+**전략별 동작:**
+
+```
+overwrite (기본)
+→ 무조건 덮어씀. 빠르지만 개발자 수정 사라짐.
+→ 권장: git 커밋 후 실행할 것 (워크플로우에서 강제)
+
+skip
+→ 파일이 존재하면 건너뜀. 완전히 새 컴포넌트만 생성.
+
+merge (핵심 전략)
+→ "생성 마커" 블록만 업데이트. 마커 밖은 보존.
+→ 생성 파일에 마커 삽입:
+```
+
+```tsx
+// ─── figma-to-react:generated:start ───────────────────────
+// ⚠️  이 블록은 자동 생성됨. 직접 수정하지 마세요.
+// 마지막 생성: 2026-02-22T10:00:00 | Figma: abc123:456
+export interface ButtonProps {
+  variant?: 'primary' | 'secondary';
+  label: string;
+}
+// ─── figma-to-react:generated:end ─────────────────────────
+
+// 아래는 개발자 영역 — 자유롭게 수정 가능
+export const Button = ({ variant = 'primary', label }: ButtonProps) => {
+  // 개발자가 추가한 로직...
+  return <button className={cn(styles[variant])}>{label}</button>;
+};
+```
+
+```
+interactive
+→ 충돌 시 diff 표시 후 사용자가 선택 (y/n/merge)
+→ 로컬 개발 시 권장
+```
+
+**merge 전략 구현 포인트:**
+```typescript
+// file-writer.ts
+function mergeWithExisting(existingContent: string, newContent: string): string {
+  const START = '// ─── figma-to-react:generated:start';
+  const END = '// ─── figma-to-react:generated:end';
+  
+  const hasMarkers = existingContent.includes(START);
+  if (!hasMarkers) return newContent;  // 마커 없으면 전체 덮어쓰기
+  
+  // 마커 사이 내용만 교체
+  const before = existingContent.substring(0, existingContent.indexOf(START));
+  const after = existingContent.substring(existingContent.indexOf(END) + END.length);
+  const newBlock = extractGeneratedBlock(newContent);
+  
+  return before + newBlock + after;
+}
+```
+
+---
+
+### [보완 4] 접근성(a11y) 전략
+
+**문제:** 현재 설계는 a11y를 전혀 고려하지 않음. 생성된 컴포넌트가 접근성 없는 코드를 만들 수 있음.
+
+**Figma → ARIA 매핑 규칙:**
+
+```typescript
+// node-parser.ts에 추가
+function inferAriaProps(node: FigmaNode): Record<string, string> {
+  const aria: Record<string, string> = {};
+  
+  // 노드 이름 패턴 → role 추론
+  const name = node.name.toLowerCase();
+  if (name.includes('button')) aria.role = 'button';
+  if (name.includes('dialog') || name.includes('modal')) aria.role = 'dialog';
+  if (name.includes('nav')) aria.role = 'navigation';
+  if (name.includes('list')) aria.role = 'list';
+  if (name.includes('listitem') || name.includes('list-item')) aria.role = 'listitem';
+  
+  // Figma의 accessibility 정보 (Plugin API에서만 접근 가능)
+  // node.annotation?.label → aria-label
+  if ('annotation' in node && node.annotation?.label) {
+    aria['aria-label'] = node.annotation.label;
+  }
+  
+  return aria;
+}
+```
+
+**생성 코드에 기본 a11y 적용:**
+```tsx
+// Button → role="button" + tabIndex + onKeyDown
+<button
+  className={cn(...)}
+  onClick={onClick}
+  disabled={disabled}
+  aria-disabled={disabled}
+  // 개발자가 채워야 할 자리 표시
+  aria-label={ariaLabel}  // prop으로 추출
+>
+
+// img → alt prop 필수
+<img src={src} alt={alt ?? ''} />
+
+// 장식용 이미지 → alt=""
+// [img:decorative] 컨벤션 시 alt="" 자동 설정
+```
+
+**config에 a11y 레벨 설정:**
+```yaml
+accessibility:
+  level: "warn"   # off | warn | error
+  # warn: a11y 문제 있으면 경고만
+  # error: a11y 필수 속성 없으면 생성 중단
+  autoFix: true   # 추론 가능한 경우 자동 추가
+```
+
+---
+
+### [보완 5] 상태 관리 전략
+
+**문제:** Figma는 상태(State)를 Variant로 표현하지만 실제 React 상태(useState 등)와는 다름.
+
+**분류:**
+
+```
+① 외형 Variant (Figma Variant → CSS 클래스 전환)
+   예: Button Primary/Secondary/Ghost → variant prop
+   → CSS 조건부 클래스로 처리. 상태 불필요.
+   
+② 인터랙션 상태 (Hover, Focus, Active)
+   → CSS :hover/:focus로 처리. 상태 불필요.
+   
+③ 진짜 React 상태가 필요한 경우
+   예: open/closed, selected/unselected, loading
+   → 생성 시 TODO 주석 삽입
+```
+
+**상태 필요 컴포넌트 처리:**
+```tsx
+// 생성된 코드에 TODO 삽입
+export const Dropdown = ({ items, label }: DropdownProps) => {
+  // TODO: figma-to-react — 이 컴포넌트는 open/closed 상태가 필요합니다.
+  // const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <div className="relative">
+      <button>{label}</button>
+      {/* TODO: isOpen && <DropdownMenu items={items} /> */}
+    </div>
+  );
+};
+```
+
+**상태 필요 패턴 감지 기준 (node-parser.ts):**
+```typescript
+function requiresState(node: IRNode): string[] {
+  const todos: string[] = [];
+  const name = node.name.toLowerCase();
+  
+  if (name.includes('dropdown') || name.includes('select'))
+    todos.push('open/closed 상태 (useState)');
+  if (name.includes('modal') || name.includes('dialog'))
+    todos.push('visible 상태 (useState) + Portal 고려');
+  if (name.includes('accordion'))
+    todos.push('expanded 상태 (useState)');
+  if (name.includes('tab'))
+    todos.push('activeTab 상태 (useState)');
+  if (name.includes('toast') || name.includes('snackbar'))
+    todos.push('timer 기반 표시 상태 고려');
+    
+  return todos;
+}
+```
+
+---
+
+### [보완 6] 다크모드 / 테마 전환
+
+**Figma에서 다크모드 처리 방법:**
+
+```
+방법 A: Figma Variables의 Mode 사용 (권장)
+  - Figma Variables에 Light/Dark 모드 정의
+  - 추출 시 CSS custom properties로 변환
+  - --color-bg: light → #fff / dark → #1a1a1a
+
+방법 B: 별도 Frame으로 분리
+  - "Button/Light", "Button/Dark" 별도 컴포넌트
+  - 각각 추출 후 CSS 클래스로 병합
+
+방법 C: 단일 토큰 시스템
+  - 다크/라이트 구분 없이 semantic 토큰 사용
+  - --color-surface, --color-on-surface 등
+```
+
+**생성 전략 (방법 A 기준):**
+
+```typescript
+// theme/extractor.ts 확장
+interface ThemeMode {
+  name: string;  // 'Light' | 'Dark' | ...
+  tokens: Record<string, string>;
+}
+
+// → theme.ts 생성 결과
+export const themes = {
+  light: { colors: { bg: '#ffffff', text: '#000000' } },
+  dark:  { colors: { bg: '#1a1a1a', text: '#ffffff' } },
+};
+
+// → CSS custom properties
+:root { --color-bg: #ffffff; --color-text: #000000; }
+[data-theme="dark"] { --color-bg: #1a1a1a; --color-text: #ffffff; }
+```
+
+**config 설정:**
+```yaml
+theme:
+  modes:
+    - "Light"   # Figma Variable Mode 이름
+    - "Dark"
+  defaultMode: "Light"
+  strategy: "css-variables"  # css-variables | class | data-attribute
+```
+
+---
+
+### [보완 7] 에러 처리 전략
+
+**레이어별 에러 처리:**
+
+```typescript
+// 공통 에러 타입
+type F2RError =
+  | { code: 'FIGMA_API_ERROR'; status: number; message: string }
+  | { code: 'RATE_LIMIT'; retryAfter: number }
+  | { code: 'NODE_NOT_FOUND'; nodeId: string }
+  | { code: 'PARSE_FAILED'; nodeId: string; reason: string }
+  | { code: 'STYLE_UNSUPPORTED'; feature: string; fallback: string }
+  | { code: 'FILE_WRITE_FAILED'; path: string; reason: string }
+  | { code: 'AUTH_FAILED' }
+
+// 에러별 처리
+FIGMA_API_ERROR  → 로그 출력 + 재시도 (최대 3회)
+RATE_LIMIT       → retryAfter 초 대기 후 재시도
+NODE_NOT_FOUND   → 해당 노드 스킵 + 경고 출력
+PARSE_FAILED     → 해당 노드 스킵 + 경고 + div placeholder 생성
+STYLE_UNSUPPORTED→ fallback 적용 + 경고 (계속 진행)
+FILE_WRITE_FAILED → 즉시 실패 + 이유 출력
+AUTH_FAILED      → 즉시 실패 + 토큰 재발급 안내
+```
+
+**재시도 로직:**
+```typescript
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  backoff = 1000
+): Promise<T> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (isRateLimitError(err)) {
+        await sleep(err.retryAfter * 1000);
+        continue;
+      }
+      if (attempt === maxRetries - 1) throw err;
+      await sleep(backoff * 2 ** attempt);  // exponential backoff
+    }
+  }
+  throw new Error('unreachable');
+}
+```
+
+**CLI 에러 출력 포맷:**
+```
+✅ Button.tsx 생성 완료
+✅ Button.module.css 생성 완료
+⚠️ Card/Hero: absolute layout 감지 → position: absolute 사용
+⚠️ Icon/Arrow: diamond-gradient 미지원 → 이미지로 export
+❌ Icon/Custom: Figma API 파싱 실패 → 건너뜀 (node: 123:789)
+
+완료: 12/14 컴포넌트 | 경고: 2 | 실패: 1
+실패 상세: figma-to-react-errors.log 참고
+```
+
+---
+
+### [보완 8] 폰트 처리 전략
+
+**문제:** Figma에서 사용한 폰트를 브라우저에서 로드해야 하는데 현재 설계에 없음.
+
+**처리 흐름:**
+```typescript
+// parser/style-parser.ts
+interface FontInfo {
+  family: string;       // 'Inter', 'Pretendard', ...
+  weights: number[];    // [400, 500, 700]
+  source: 'google' | 'system' | 'custom' | 'unknown';
+}
+
+// Google Fonts 목록과 대조 → 자동 감지
+const GOOGLE_FONTS = ['Inter', 'Roboto', 'Noto Sans KR', ...];
+// 시스템 폰트 목록
+const SYSTEM_FONTS = ['-apple-system', 'Arial', 'Georgia', ...];
+```
+
+**config 설정에 따른 처리:**
+```yaml
+fonts:
+  strategy: "google-fonts"  # google-fonts | local | manual | skip
+  outputFile: "./src/styles/fonts.css"
+```
+
+**결과물:**
+```css
+/* 자동 생성: src/styles/fonts.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+```
+
+```tsx
+/* 자동 생성: src/app/layout.tsx (Next.js) 또는 index.html에 주석으로 안내 */
+// TODO: <link rel="stylesheet" href="/styles/fonts.css" /> 추가 필요
+```
+
+---
+
+### [보완 9] 테스트 전략
+
+**구조:**
+```
+fixtures/                     # 실제 Figma API 응답 스냅샷 (JSON)
+├── button-simple.json        # 단순 버튼 (Auto Layout)
+├── button-variants.json      # Variant 있는 버튼
+├── card-with-image.json      # 이미지 포함 카드
+├── list-repeating.json       # 반복 패턴 리스트
+├── absolute-layout.json      # absolute 레이아웃 (엣지 케이스)
+└── token-set.json            # 디자인 토큰 세트
+
+packages/core/src/__tests__/
+├── parser/
+│   ├── layout-parser.test.ts      # Auto Layout → IRLayout
+│   └── style-parser.test.ts       # fills → IRStyle
+├── adapters/
+│   ├── tailwind.test.ts           # IRLayout → Tailwind 클래스
+│   └── css-modules.test.ts
+├── generator/
+│   └── component.test.ts          # IRNode → JSX 문자열
+└── e2e/
+    └── button.test.ts             # fixture → 최종 파일 end-to-end
+```
+
+**테스트 예시:**
+```typescript
+// adapters/tailwind.test.ts
+describe('Tailwind Adapter', () => {
+  it('flex row with gap → correct classes', () => {
+    const layout: IRLayout = {
+      display: 'flex', direction: 'row', gap: 8,
+      justify: 'flex-start', align: 'center',
+      width: { type: 'fill' }, height: { type: 'hug' },
+      position: 'static',
+    };
+    expect(generateTailwindClasses(layout)).toBe(
+      'flex flex-row gap-2 justify-start items-center w-full h-fit'
+    );
+  });
+
+  it('non-standard gap falls back to arbitrary value', () => {
+    const layout = { ...baseLayout, gap: 7 };
+    expect(generateTailwindClasses(layout)).toContain('[gap:7px]');
+  });
+});
+```
+
+---
+
+### [보완 10] Git 통합 전략
+
+n8n 워크플로우 + 직접 CLI 모두에 적용.
+
+```yaml
+# config.yml
+git:
+  enabled: true
+  strategy: "branch"         # branch | commit-to-current | none
+  branchPattern: "figma/{componentName}-{date}"
+  commitMessage: "feat: {componentName} Figma 자동 생성 [{figmaFileKey}]"
+  autoPush: false            # true면 origin에 자동 push
+```
+
+**브랜치 생성 흐름:**
+```
+f2r convert --node=123:456
+
+→ git checkout -b figma/Button-2026-02-22
+→ 파일 생성
+→ git add -A
+→ git commit -m "feat: Button Figma 자동 생성 [abc123:456]"
+→ (autoPush: true면) git push origin figma/Button-2026-02-22
+→ 출력: "브랜치 figma/Button-2026-02-22 생성됨. PR 링크: ..."
+```
