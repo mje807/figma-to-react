@@ -1,13 +1,29 @@
-// @figma-to-react/core
-// IR 타입, Style Adapters, Code Generator 공유 패키지
+// @figma-to-react/core — Phase 1 구현 완료
 
-export * from './ir/types';
-export * from './adapters/base';
+// IR 타입
+export * from './ir/types.js';
 
-// TODO: 구현 예정
-// export * from './adapters/tailwind';
-// export * from './adapters/css-modules';
-// export * from './adapters/styled-components';
-// export * from './generator/component';
-// export * from './generator/types';
-// export * from './theme/extractor';
+// Style Adapter 인터페이스
+export * from './adapters/base.js';
+
+// 유틸리티
+export * from './utils/naming.js';
+export * from './utils/logger.js';
+export * from './utils/errors.js';
+
+// 설정
+export * from './config.js';
+
+// Figma Parser
+export * from './parser/figma-client.js';
+
+// TODO: Phase 2~4에서 추가
+// export * from './parser/node-parser.js';
+// export * from './parser/layout-parser.js';
+// export * from './parser/style-parser.js';
+// export * from './parser/component-parser.js';
+// export * from './adapters/tailwind.js';
+// export * from './adapters/css-modules.js';
+// export * from './adapters/styled-components.js';
+// export * from './generator/component.js';
+// export * from './theme/extractor.js';
