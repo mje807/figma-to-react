@@ -69,5 +69,36 @@ export {
   generateTailwindExtend,
 } from './theme/tailwind-config.js';
 
-// TODO: Phase 4에서 추가
-// export * from './generator/component.js';
+// ── Phase 4: Code Generator ────────────────────────────────────────────────
+export { JsxBuilder, type JsxBuilderOptions } from './generator/jsx-builder.js';
+export {
+  generatePropsInterface,
+  generateDefaultPropsInterface,
+  propDefToTsType,
+  generateTypesFile,
+} from './generator/types-gen.js';
+export {
+  ImportResolver,
+  type ImportDeclaration,
+  type ResolvedImports,
+} from './generator/import-resolver.js';
+export {
+  generateBarrelFile,
+  generateCategoryBarrels,
+  generateComponentReadme,
+  type BarrelEntry,
+} from './generator/barrel.js';
+export {
+  formatCode,
+  formatFiles,
+  basicFormat,
+  addGenerationComment,
+  type FileType,
+} from './generator/formatter.js';
+export {
+  ComponentGenerator,
+  generateComponent,
+  type GenerateOptions,
+  type GeneratedFile,
+  type GeneratedComponent,
+} from './generator/component.js';
