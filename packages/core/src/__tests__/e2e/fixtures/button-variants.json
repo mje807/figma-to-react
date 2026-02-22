@@ -1,0 +1,85 @@
+{
+  "id": "btn-variants",
+  "figmaId": "200:1",
+  "type": "component",
+  "name": "Button",
+  "tag": "button",
+  "layout": {
+    "display": "flex",
+    "position": "static",
+    "direction": "row",
+    "gap": 8,
+    "padding": [12, 20, 12, 20],
+    "justify": "center",
+    "align": "center",
+    "width": { "type": "hug" },
+    "height": { "type": "fixed", "value": 44 }
+  },
+  "style": {
+    "background": { "type": "solid", "r": 59, "g": 130, "b": 246, "a": 1 },
+    "borderRadius": 8
+  },
+  "children": [
+    {
+      "id": "btn-label",
+      "figmaId": "200:2",
+      "type": "text",
+      "name": "Label",
+      "tag": "span",
+      "layout": {
+        "display": "inline",
+        "position": "static",
+        "width": { "type": "hug" },
+        "height": { "type": "hug" }
+      },
+      "style": {},
+      "content": {
+        "text": "Button",
+        "isPropCandidate": true,
+        "propName": "label"
+      },
+      "children": [],
+      "props": [],
+      "meta": {
+        "isComponentRoot": false,
+        "isVariantContainer": false,
+        "isRepeating": false,
+        "hasAbsoluteChildren": false,
+        "warnings": [],
+        "figmaStyles": []
+      }
+    }
+  ],
+  "props": [
+    {
+      "name": "variant",
+      "type": "enum",
+      "values": ["primary", "secondary", "ghost"],
+      "defaultValue": "primary"
+    },
+    {
+      "name": "size",
+      "type": "enum",
+      "values": ["sm", "md", "lg"],
+      "defaultValue": "md"
+    },
+    {
+      "name": "disabled",
+      "type": "boolean",
+      "defaultValue": false
+    },
+    {
+      "name": "label",
+      "type": "string",
+      "defaultValue": "Button"
+    }
+  ],
+  "meta": {
+    "isComponentRoot": true,
+    "isVariantContainer": true,
+    "isRepeating": false,
+    "hasAbsoluteChildren": false,
+    "warnings": [],
+    "figmaStyles": []
+  }
+}

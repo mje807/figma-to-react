@@ -1,0 +1,77 @@
+{
+  "id": "btn-simple",
+  "figmaId": "100:1",
+  "type": "component",
+  "name": "Button",
+  "tag": "button",
+  "layout": {
+    "display": "flex",
+    "position": "static",
+    "direction": "row",
+    "gap": 8,
+    "padding": [12, 20, 12, 20],
+    "justify": "center",
+    "align": "center",
+    "width": { "type": "hug" },
+    "height": { "type": "fixed", "value": 44 }
+  },
+  "style": {
+    "background": { "type": "solid", "r": 59, "g": 130, "b": 246, "a": 1 },
+    "borderRadius": 8
+  },
+  "children": [
+    {
+      "id": "btn-label",
+      "figmaId": "100:2",
+      "type": "text",
+      "name": "Label",
+      "tag": "span",
+      "layout": {
+        "display": "inline",
+        "position": "static",
+        "width": { "type": "hug" },
+        "height": { "type": "hug" }
+      },
+      "style": {
+        "font": {
+          "family": "Inter",
+          "size": 16,
+          "weight": 600,
+          "lineHeight": 24,
+          "letterSpacing": 0,
+          "align": "center"
+        }
+      },
+      "content": {
+        "text": "Button",
+        "isPropCandidate": true,
+        "propName": "label"
+      },
+      "children": [],
+      "props": [],
+      "meta": {
+        "isComponentRoot": false,
+        "isVariantContainer": false,
+        "isRepeating": false,
+        "hasAbsoluteChildren": false,
+        "warnings": [],
+        "figmaStyles": []
+      }
+    }
+  ],
+  "props": [
+    {
+      "name": "label",
+      "type": "string",
+      "defaultValue": "Button"
+    }
+  ],
+  "meta": {
+    "isComponentRoot": true,
+    "isVariantContainer": false,
+    "isRepeating": false,
+    "hasAbsoluteChildren": false,
+    "warnings": [],
+    "figmaStyles": ["Primary/Blue"]
+  }
+}

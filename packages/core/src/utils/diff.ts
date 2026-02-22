@@ -97,8 +97,9 @@ export function extractUserBlocks(content: string): UserBlock[] {
 /**
  * 새로 생성된 파일에 기존 사용자 블록 삽입
  *
- * 새 파일의 마커 위치를 찾아서 기존 내용으로 교체.
- * 마커가 없으면 그대로 반환.
+ * 전략:
+ *   1. 새 파일에 @f2r-user-start 마커가 있으면 → 해당 위치에 기존 코드 삽입
+ *   2. 새 파일에 마커가 없으면 → 기존 사용자 블록을 파일 끝에 추가
  */
 export function mergeUserBlocks(
   existingContent: string,
@@ -119,43 +120,69 @@ export function mergeUserBlocks(
   let blockIndex = 0;
   let preservedCount = 0;
 
-  const newLines = generatedContent.split('\n');
-  const resultLines: string[] = [];
-  let skipUntilEnd = false;
-  let currentId = '';
+  // ① 새 파일에 매칭 마커 있는지 확인
+  const generatedHasMarkers = generatedContent.includes(USER_BLOCK_START);
 
-  for (const line of newLines) {
-    const trimmed = line.trim();
+  if (generatedHasMarkers) {
+    // 마커 위치에 기존 코드 삽입
+    const newLines = generatedContent.split('\n');
+    const resultLines: string[] = [];
+    let skipUntilEnd = false;
+    let currentId = '';
 
-    if (skipUntilEnd) {
-      if (trimmed === USER_BLOCK_END) {
-        // 기존 사용자 블록 삽입
-        const block = blockMap.get(currentId);
-        if (block && block.content.trim()) {
-          resultLines.push(...block.content.split('\n'));
-          preservedCount++;
+    for (const line of newLines) {
+      const trimmed = line.trim();
+
+      if (skipUntilEnd) {
+        if (trimmed === USER_BLOCK_END) {
+          const block = blockMap.get(currentId);
+          if (block && block.content.trim()) {
+            resultLines.push(...block.content.split('\n'));
+            preservedCount++;
+          }
+          resultLines.push(line); // @f2r-user-end
+          skipUntilEnd = false;
         }
-        resultLines.push(line); // @f2r-user-end
-        skipUntilEnd = false;
+        // 새 파일 블록 내용 스킵 (기존 코드로 대체)
+        continue;
       }
-      // 새 파일의 블록 내용은 스킵 (기존 사용자 코드로 대체됨)
-      continue;
+
+      if (trimmed.startsWith(USER_BLOCK_START)) {
+        const label = trimmed.slice(USER_BLOCK_START.length).trim();
+        currentId = label || `block_${blockIndex}`;
+        blockIndex++;
+        resultLines.push(line);
+        skipUntilEnd = true;
+        continue;
+      }
+
+      resultLines.push(line);
     }
 
-    if (trimmed.startsWith(USER_BLOCK_START)) {
-      const label = trimmed.slice(USER_BLOCK_START.length).trim();
-      currentId = label || `block_${blockIndex}`;
-      blockIndex++;
-      resultLines.push(line); // @f2r-user-start 라인 유지
-      skipUntilEnd = true;
-      continue;
-    }
-
-    resultLines.push(line);
+    return {
+      merged: resultLines.join('\n'),
+      preservedCount,
+      hadUserBlocks: true,
+    };
   }
 
+  // ② 새 파일에 마커 없음 → 기존 사용자 블록을 파일 끝에 추가
+  const appendedBlocks: string[] = [];
+  for (const block of userBlocks) {
+    if (block.content.trim()) {
+      const label = block.id.startsWith('block_') ? undefined : block.id;
+      appendedBlocks.push(wrapUserBlock(block.content, label));
+      preservedCount++;
+    }
+  }
+
+  const merged =
+    appendedBlocks.length > 0
+      ? `${generatedContent.trimEnd()}\n\n${appendedBlocks.join('\n\n')}\n`
+      : generatedContent;
+
   return {
-    merged: resultLines.join('\n'),
+    merged,
     preservedCount,
     hadUserBlocks: true,
   };
