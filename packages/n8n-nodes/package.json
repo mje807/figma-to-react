@@ -1,0 +1,21 @@
+{
+  "name": "@figma-to-react/n8n-nodes",
+  "version": "0.1.0",
+  "description": "n8n 커스텀 노드: Figma to React 워크플로우 통합",
+  "keywords": ["n8n-community-node-package"],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": ["dist/credentials/FigmaToReactApi.credentials.js"],
+    "nodes": [
+      "dist/nodes/FigmaToReact/FigmaToReact.node.js",
+      "dist/nodes/FigmaToReact/FigmaToReactTrigger.node.js"
+    ]
+  },
+  "scripts": {
+    "build": "tsc && gulp build:icons",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "n8n-workflow": "*"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "name": "Figma 핸드오프 → GitHub PR 자동 생성",
+  "meta": {
+    "description": "Figma에서 컴포넌트 변경 감지 → React 코드 생성 → GitHub PR 오픈 → Slack 알림",
+    "templateVersion": "0.1.0"
+  },
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Figma Change Trigger",
+      "type": "@figma-to-react/n8n-nodes.figmaToReactTrigger",
+      "position": [0, 0],
+      "parameters": {
+        "fileKey": "YOUR_FIGMA_FILE_KEY",
+        "watchType": "components"
+      }
+    },
+    {
+      "id": "convert",
+      "name": "코드 생성",
+      "type": "@figma-to-react/n8n-nodes.figmaToReact",
+      "position": [300, 0],
+      "parameters": {
+        "fileKey": "={{ $json.fileKey }}",
+        "nodeId": "={{ $json.nodeId }}",
+        "style": "tailwind",
+        "outputDir": "./src/components",
+        "typescript": true,
+        "stories": true
+      }
+    },
+    {
+      "id": "github_pr",
+      "name": "GitHub PR 생성",
+      "type": "n8n-nodes-base.github",
+      "position": [600, 0],
+      "parameters": {
+        "resource": "pullRequest",
+        "operation": "create",
+        "owner": "YOUR_ORG",
+        "repository": "YOUR_REPO",
+        "title": "feat: {{ $json.componentName }} 컴포넌트 자동 생성",
+        "body": "## 자동 생성된 컴포넌트\n\n- 컴포넌트: `{{ $json.componentName }}`\n- 생성 파일: {{ $json.files.join(', ') }}\n- 스타일: Tailwind CSS\n\n> figma-to-react에 의해 자동 생성됨"
+      }
+    },
+    {
+      "id": "slack",
+      "name": "Slack 알림",
+      "type": "n8n-nodes-base.slack",
+      "position": [900, 0],
+      "parameters": {
+        "channel": "#frontend-dev",
+        "text": "🎨 *{{ $node.convert.json.componentName }}* 컴포넌트 PR이 준비됐어요!\n<{{ $node.github_pr.json.html_url }}|PR 확인하기>"
+      }
+    }
+  ],
+  "connections": {
+    "trigger": { "main": [[{ "node": "convert", "type": "main", "index": 0 }]] },
+    "convert": { "main": [[{ "node": "github_pr", "type": "main", "index": 0 }]] },
+    "github_pr": { "main": [[{ "node": "slack", "type": "main", "index": 0 }]] }
+  }
+}
